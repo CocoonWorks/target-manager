@@ -6,8 +6,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Meal Planner",
-  description: "Beautiful meal planning application with light and dark mode",
+  title: "Task Manager",
+  description: "Beautiful task management application with light and dark mode",
 };
 
 export default function RootLayout({
