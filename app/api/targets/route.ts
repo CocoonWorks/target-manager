@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
-import Target from "@/models/Target";
-import User from "@/models/User";
+import { Target, User } from "@/models";
 
 // GET /api/targets - Get all targets for the authenticated user
 export async function GET(request: NextRequest) {

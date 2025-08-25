@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
-import Target from "@/models/Target";
+import { Target } from "@/models";
 import { S3Service } from "@/lib/s3";
 
 // POST /api/targets/[id]/upload - Upload files to S3 and update target

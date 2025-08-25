@@ -19,59 +19,15 @@ async function addSampleTargets() {
 
     console.log("✅ Connected to MongoDB successfully!");
 
-    // Define the Target schema
-    const targetSchema = new mongoose.Schema(
-      {
-        title: { type: String, required: true, trim: true },
-        assignedDate: { type: Date, required: true },
-        description: { type: String, required: true, trim: true },
-        tags: [{ type: String, trim: true }],
-        status: {
-          type: String,
-          enum: ["pending", "completed"],
-          default: "pending",
-        },
-        targetDate: { type: Date, required: true },
-        priority: {
-          type: String,
-          enum: ["low", "medium", "high"],
-          default: "medium",
-        },
-        files: [
-          {
-            fileName: { type: String, required: true },
-            fileUrl: { type: String, required: true },
-            fileType: { type: String, required: true },
-            fileSize: { type: Number, required: true },
-            uploadedAt: { type: Date, default: Date.now },
-          },
-        ],
-        createdBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          required: true,
-        },
-      },
-      { timestamps: true }
-    );
+    // Import models to ensure schemas are registered
+    require("../models/User");
+    require("../models/Target");
 
-    const Target =
-      mongoose.models.Target || mongoose.model("Target", targetSchema);
+    // Get the models
+    const Target = mongoose.model("Target");
+    const User = mongoose.model("User");
 
     // Get the demo user ID
-    const User =
-      mongoose.models.User ||
-      mongoose.model(
-        "User",
-        mongoose.Schema({
-          username: String,
-          password: String,
-          name: String,
-          phone: String,
-          active: Boolean,
-        })
-      );
-
     const demoUser = await User.findOne({ username: "demo" });
     if (!demoUser) {
       console.log("❌ Demo user not found. Please run add-demo-user.js first.");

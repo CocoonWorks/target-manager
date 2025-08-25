@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
-import Target from "@/models/Target";
+import { Target } from "@/models";
 
 // GET /api/targets/[id] - Get a specific target
 export async function GET(

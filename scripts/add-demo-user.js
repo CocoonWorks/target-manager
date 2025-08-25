@@ -23,63 +23,39 @@ async function addDemoUser() {
 
     console.log("✅ Connected to MongoDB successfully!");
 
-    // Define User Schema
-    const userSchema = new mongoose.Schema(
-      {
-        username: { type: String, required: true, unique: true },
-        password: { type: String, required: true },
-        name: { type: String, required: true },
-        phone: { type: String, required: true },
-        active: { type: Boolean, default: true },
-      },
-      { timestamps: true }
-    );
+    // Import models to ensure schemas are registered
+    require("../models/User");
+    require("../models/Target");
 
-    const User = mongoose.models.User || mongoose.model("User", userSchema);
+    // Get the User model
+    const User = mongoose.model("User");
 
-    // Demo user data
-    const demoUser = {
-      username: "demo",
-      password: "demo123",
-      name: "Demo User",
-      phone: "+1234567890",
-      active: true,
-    };
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ username: demoUser.username });
+    // Check if demo user already exists
+    const existingUser = await User.findOne({ username: "demo" });
     if (existingUser) {
       console.log("ℹ️  Demo user already exists");
       return;
     }
 
-    // Create new user
-    const user = new User(demoUser);
-    await user.save();
-
-    console.log("✅ Demo user created successfully:", {
-      username: user.username,
-      name: user.name,
-      phone: user.phone,
+    // Create demo user
+    const demoUser = new User({
+      username: "demo",
+      password: "demo123",
+      name: "Demo User",
+      phone: "+1234567890",
+      active: true,
     });
+
+    await demoUser.save();
+    console.log("✅ Demo user created successfully!");
+    console.log("📝 Username: demo");
+    console.log("🔑 Password: demo123");
   } catch (error) {
+    console.error("❌ Error:", error.message);
     if (error.name === "MongoServerSelectionError") {
-      console.error("❌ MongoDB Connection Failed!");
       console.error(
-        "Please make sure MongoDB is running or check your connection string."
+        "💡 Make sure MongoDB is running and the connection string is correct"
       );
-      console.error("\nOptions to fix this:");
-      console.error(
-        "1. Install MongoDB locally: https://docs.mongodb.com/manual/installation/"
-      );
-      console.error(
-        "2. Use MongoDB Atlas (free cloud): https://www.mongodb.com/atlas"
-      );
-      console.error(
-        "3. Set MONGODB_URI environment variable with your connection string"
-      );
-    } else {
-      console.error("❌ Error creating demo user:", error.message);
     }
   } finally {
     if (mongoose.connection.readyState === 1) {
