@@ -30,9 +30,7 @@ export default function Header() {
           {/* Left side - App name */}
           <div className="flex items-center space-x-2">
             <Briefcase className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold text-foreground">
-              Target Manager
-            </span>
+            <span className="font-bold text-foreground">Target Manager</span>
           </div>
 
           {/* Center - User info */}
