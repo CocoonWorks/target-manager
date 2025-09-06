@@ -26,7 +26,7 @@ Task management application with file upload capabilities.
 3. Add demo user: `node scripts/add-demo-user.js`
 4. Start development server: `npm run dev`
 
-## Quick Login
+## Quick Login Using Link
 
 Access dashboard directly:
 
