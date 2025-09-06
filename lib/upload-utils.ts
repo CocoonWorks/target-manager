@@ -132,7 +132,7 @@ export class UploadManager {
               progress.status = "uploading";
               if (onProgress)
                 onProgress([
-                  ...presignedUrls.map((_, i) =>
+                  ...presignedUrls.map((_: any, i: number) =>
                     i === index
                       ? progress
                       : {
@@ -150,7 +150,7 @@ export class UploadManager {
                   progress.progress = uploadProgress;
                   if (onProgress)
                     onProgress([
-                      ...presignedUrls.map((_, i) =>
+                      ...presignedUrls.map((_: any, i: number) =>
                         i === index
                           ? progress
                           : {
@@ -167,7 +167,7 @@ export class UploadManager {
               progress.progress = 100;
               if (onProgress)
                 onProgress([
-                  ...presignedUrls.map((_, i) =>
+                  ...presignedUrls.map((_: any, i: number) =>
                     i === index
                       ? progress
                       : {
@@ -192,7 +192,7 @@ export class UploadManager {
                 error instanceof Error ? error.message : "Upload failed";
               if (onProgress)
                 onProgress([
-                  ...presignedUrls.map((_, i) =>
+                  ...presignedUrls.map((_: any, i: number) =>
                     i === index
                       ? progress
                       : {
