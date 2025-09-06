@@ -15,7 +15,13 @@ interface Target {
   tags: string[];
   status: "pending" | "completed";
   targetDate: string;
-  priority: "low" | "medium" | "high";
+  documentCount: number;
+  assignedTo: {
+    _id: string;
+    name: string;
+    username: string;
+  };
+  score: number | null;
   files: Array<{
     fileName: string;
     fileUrl: string;
@@ -23,18 +29,13 @@ interface Target {
     fileSize: number;
     uploadedAt: string;
   }>;
-  createdBy: {
-    _id: string;
-    name: string;
-    username: string;
-  };
   createdAt: string;
   updatedAt: string;
 }
 
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState<string>("all");
-  const [targets, setTargets] = useState<Target[]>([]);
+  const [tasks, setTasks] = useState<Target[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
@@ -43,37 +44,27 @@ export default function Home() {
   useEffect(() => {
     const fetchTargets = async () => {
       try {
-        console.log("🔍 Home: Starting to fetch targets...");
         setIsLoading(true);
         const token = localStorage.getItem("auth-token");
 
-        console.log("🔍 Home: Token from localStorage:", token);
-
         if (!token) {
-          console.log("❌ Home: No authentication token found");
           setError("No authentication token found");
           return;
         }
 
-        console.log("🔍 Home: Making API call to /api/targets...");
         const response = await fetch("/api/targets", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        console.log("🔍 Home: API response status:", response.status);
-        console.log("🔍 Home: API response ok:", response.ok);
-
         if (!response.ok) {
           const errorText = await response.text();
-          console.log("❌ Home: API error response:", errorText);
           throw new Error("Failed to fetch targets");
         }
 
         const data = await response.json();
-        console.log("✅ Home: API response data:", data);
-        setTargets(data.targets);
+        setTasks(data.targets);
       } catch (err) {
         console.error("❌ Home: Error fetching targets:", err);
         setError(
@@ -81,45 +72,40 @@ export default function Home() {
         );
       } finally {
         setIsLoading(false);
-        console.log("🔍 Home: Fetch targets complete, isLoading:", false);
       }
     };
 
-    console.log("🔍 Home: useEffect triggered, user:", user);
     if (user) {
-      console.log("🔍 Home: User is authenticated, fetching targets...");
       fetchTargets();
-    } else {
-      console.log("🔍 Home: No user, not fetching targets");
     }
   }, [user]);
 
-  const getFilteredTargets = () => {
+  const getFilteredTasks = () => {
     const today = new Date();
     const sevenDaysFromNow = new Date();
     sevenDaysFromNow.setDate(today.getDate() + 7);
 
     switch (activeFilter) {
       case "pending":
-        return targets.filter((target) => target.status === "pending");
+        return tasks.filter((task) => task.status === "pending");
       case "completed":
-        return targets.filter((target) => target.status === "completed");
+        return tasks.filter((task) => task.status === "completed");
       case "today":
-        return targets.filter((target) => {
-          const targetDate = new Date(target.targetDate);
+        return tasks.filter((task) => {
+          const targetDate = new Date(task.targetDate);
           return targetDate.toDateString() === today.toDateString();
         });
       case "7days":
-        return targets.filter((target) => {
-          const targetDate = new Date(target.targetDate);
+        return tasks.filter((task) => {
+          const targetDate = new Date(task.targetDate);
           return targetDate <= sevenDaysFromNow && targetDate >= today;
         });
       default:
-        return targets;
+        return tasks;
     }
   };
 
-  const filteredTargets = getFilteredTargets();
+  const filteredTasks = getFilteredTasks();
 
   if (isLoading) {
     return (
@@ -129,7 +115,7 @@ export default function Home() {
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-center">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading targets...</p>
+              <p className="text-muted-foreground">Loading tasks...</p>
             </div>
           </div>
         </div>
@@ -145,7 +131,7 @@ export default function Home() {
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-center p-8 rounded-3xl bg-white/20 backdrop-blur-xl border border-white/30 shadow-2xl">
               <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
-                Error Loading Targets
+                Error Loading Tasks
               </h1>
               <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
               <Button
@@ -201,7 +187,7 @@ export default function Home() {
               >
                 Completed
               </Button>
-              <Button
+              {/* <Button
                 variant={activeFilter === "today" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setActiveFilter("today")}
@@ -216,46 +202,47 @@ export default function Home() {
                 className="rounded-full px-6"
               >
                 7 Days
-              </Button>
+              </Button> */}
             </div>
           </div>
 
           {/* Target count - no glassmorphic effect */}
           <div className="text-center mb-8">
             <p className="text-gray-700 dark:text-gray-300 text-lg">
-              Showing {filteredTargets.length} target
-              {filteredTargets.length !== 1 ? "s" : ""}
+              Showing {filteredTasks.length} task
+              {filteredTasks.length !== 1 ? "s" : ""}
             </p>
           </div>
 
-          {/* Glassmorphic grid layout for all targets */}
+          {/* Glassmorphic grid layout for all tasks */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredTargets.map((target) => (
+            {filteredTasks.map((task) => (
               <TargetCard
-                key={target._id}
-                id={target._id}
-                title={target.title}
-                assignedDate={target.assignedDate}
-                description={target.description}
-                tags={target.tags}
-                status={target.status}
-                targetDate={target.targetDate}
-                priority={target.priority}
+                key={task._id}
+                id={task._id}
+                title={task.title}
+                assignedDate={task.assignedDate}
+                description={task.description}
+                tags={task.tags}
+                status={task.status}
+                targetDate={task.targetDate}
+                documentCount={task.documentCount}
+                score={task.score}
               />
             ))}
           </div>
 
           {/* Empty state */}
-          {filteredTargets.length === 0 && (
+          {filteredTasks.length === 0 && (
             <div className="text-center py-12">
               <div className="rounded-3xl bg-white/20 backdrop-blur-xl border border-white/30 shadow-2xl p-8 max-w-md mx-auto">
                 <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">
-                  No targets found
+                  No tasks found
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300">
                   {activeFilter === "all"
-                    ? "Create your first target to get started!"
-                    : `No ${activeFilter} targets found.`}
+                    ? "Create your first task to get started!"
+                    : `No ${activeFilter} tasks found.`}
                 </p>
               </div>
             </div>

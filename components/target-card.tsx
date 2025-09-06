@@ -19,7 +19,8 @@ interface TargetCardProps {
   tags: string[];
   status: "completed" | "pending";
   targetDate: string;
-  priority: "high" | "medium" | "low";
+  documentCount: number;
+  score: number | null;
 }
 
 export function TargetCard({
@@ -30,7 +31,8 @@ export function TargetCard({
   tags,
   status,
   targetDate,
-  priority,
+  documentCount,
+  score,
 }: TargetCardProps) {
   const router = useRouter();
 
@@ -82,6 +84,12 @@ export function TargetCard({
             {tag}
           </span>
         ))}
+      </div>
+
+      {/* Document Count and Score */}
+      <div className="flex justify-between items-center mb-3 text-xs text-muted-foreground">
+        <span>Documents: {documentCount}</span>
+        {score !== null && <span>Score: {score}</span>}
       </div>
 
       {/* Status and arrow */}

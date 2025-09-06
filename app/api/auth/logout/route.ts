@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("🚪 Logout attempt");
-
     const response = NextResponse.json({
       message: "Logout successful",
     });
@@ -17,7 +15,6 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
-    console.log("✅ Logout successful, cookie cleared");
     return response;
   } catch (error) {
     console.error("❌ Logout error:", error);

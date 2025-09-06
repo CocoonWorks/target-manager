@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import { Target } from "@/models";
+import mongoose from "mongoose";
 
 // GET /api/targets/[id] - Get a specific target
 export async function GET(
@@ -35,8 +36,8 @@ export async function GET(
 
     const target = await Target.findOne({
       _id: params.id,
-      createdBy: userData.userId,
-    }).populate("createdBy", "name username");
+      assignedTo: new mongoose.Types.ObjectId(userData.userId),
+    }).populate("assignedTo", "name username");
 
     if (!target) {
       return NextResponse.json({ error: "Target not found" }, { status: 404 });
@@ -90,14 +91,16 @@ export async function PUT(
       description,
       tags,
       targetDate,
-      priority,
+      documentCount,
+      assignedTo,
+      score,
       status,
     } = body;
 
     const target = await Target.findOneAndUpdate(
       {
         _id: params.id,
-        createdBy: userData.userId,
+        assignedTo: new mongoose.Types.ObjectId(userData.userId),
       },
       {
         title,
@@ -105,7 +108,9 @@ export async function PUT(
         description,
         tags,
         targetDate: targetDate ? new Date(targetDate) : undefined,
-        priority,
+        documentCount: documentCount ? parseInt(documentCount) : undefined,
+        assignedTo: assignedTo ? assignedTo : undefined,
+        score: score !== undefined ? score : undefined,
         status,
       },
       { new: true, runValidators: true }
@@ -158,7 +163,7 @@ export async function DELETE(
 
     const target = await Target.findOneAndDelete({
       _id: params.id,
-      createdBy: userData.userId,
+      assignedTo: new mongoose.Types.ObjectId(userData.userId),
     });
 
     if (!target) {

@@ -48,8 +48,6 @@ export default function LoginPage() {
       // Store token in localStorage for client-side access
       localStorage.setItem("auth-token", data.token);
 
-      console.log("✅ Login successful, redirecting...");
-
       // Redirect to main page
       router.push("/");
     } catch (error) {
@@ -73,74 +71,74 @@ export default function LoginPage() {
         <div className="flex items-center justify-center min-h-screen">
           {/* Login Form */}
           <div className="w-full max-w-md">
-            <div className="rounded-2xl bg-white/20 backdrop-blur-xl border border-white/30 shadow-2xl p-8">
+            <div className="rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl p-6">
               {/* Header */}
-              <div className="text-center mb-8">
-                <div className="mx-auto w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-4 border border-white/30">
-                  <Lock className="h-8 w-8 text-gray-800 dark:text-white" />
+              <div className="text-center mb-6">
+                <div className="mx-auto w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center mb-3 border border-white/25">
+                  <Lock className="h-6 w-6 text-gray-900 dark:text-white" />
                 </div>
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
                   Welcome Back
                 </h1>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Sign in to your Target Manager account
+                <p className="text-sm text-gray-700 dark:text-gray-200">
+                  Sign in to your Task Manager account
                 </p>
               </div>
 
               {/* Error Message */}
               {error && (
-                <div className="mb-6 p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-700 dark:text-red-300 text-sm text-center">
+                <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-800 dark:text-red-200 text-sm text-center">
                   {error}
                 </div>
               )}
 
               {/* Login Form */}
-              <form onSubmit={handleLogin} className="space-y-6">
+              <form onSubmit={handleLogin} className="space-y-4">
                 {/* Username Field */}
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label
                     htmlFor="username"
-                    className="text-sm font-medium text-gray-800 dark:text-white"
+                    className="text-sm font-medium text-gray-900 dark:text-white"
                   >
                     Username
                   </Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-600 dark:text-gray-400" />
                     <Input
                       id="username"
                       type="text"
                       placeholder="Enter your username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="pl-10 bg-white/20 border-white/30 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg backdrop-blur-sm focus:bg-white/30 focus:border-white/50"
+                      className="pl-10 bg-white/15 border-white/25 text-gray-900 dark:text-white placeholder-gray-600 dark:placeholder-gray-300 rounded-lg backdrop-blur-sm focus:bg-white/25 focus:border-white/40"
                       required
                     />
                   </div>
                 </div>
 
                 {/* Password Field */}
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label
                     htmlFor="password"
-                    className="text-sm font-medium text-gray-800 dark:text-white"
+                    className="text-sm font-medium text-gray-900 dark:text-white"
                   >
                     Password
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-600 dark:text-gray-400" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10 bg-white/20 border-white/30 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded-lg backdrop-blur-sm focus:bg-white/30 focus:border-white/50"
+                      className="pl-10 pr-10 bg-white/15 border-white/25 text-gray-900 dark:text-white placeholder-gray-600 dark:placeholder-gray-300 rounded-lg backdrop-blur-sm focus:bg-white/25 focus:border-white/40"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 dark:text-gray-300"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-700 dark:text-gray-200"
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -151,15 +149,18 @@ export default function LoginPage() {
                   </div>
                 </div>
 
+                {/* Spacer for extra margin before button */}
+                <div className="h-1"></div>
+
                 {/* Login Button */}
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-white/20 hover:bg-white/30 border border-white/30 text-gray-800 dark:text-white rounded-lg backdrop-blur-sm py-3 text-base font-medium transition-all duration-200 hover:shadow-lg"
+                  className="w-full bg-white/15 hover:bg-white/25 border border-white/25 text-gray-900 dark:text-white rounded-lg backdrop-blur-sm py-2.5 text-sm font-medium transition-all duration-200 hover:shadow-lg"
                 >
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-gray-600 dark:border-gray-300 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-gray-700 dark:border-gray-200 border-t-transparent rounded-full animate-spin"></div>
                       <span>Signing In...</span>
                     </div>
                   ) : (
@@ -169,12 +170,12 @@ export default function LoginPage() {
               </form>
 
               {/* Demo Info */}
-              <div className="mt-6 p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20">
-                <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
+              {/* <div className="mt-4 p-3 rounded-lg bg-white/8 backdrop-blur-sm border border-white/15">
+                <p className="text-xs text-gray-700 dark:text-gray-300 text-center">
                   Demo: Use username: <strong>demo</strong> and password:{" "}
                   <strong>demo123</strong>
                 </p>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

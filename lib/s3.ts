@@ -2,19 +2,24 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-// S3 Client configuration
+// DigitalOcean Spaces S3 Client configuration
 const s3Client = new S3Client({
-  region: process.env.AWS_REGION || "us-east-1",
+  region: process.env.DO_SPACES_REGION || "nyc3",
+  endpoint: `https://${
+    process.env.DO_SPACES_REGION || "nyc3"
+  }.digitaloceanspaces.com`,
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.DO_SPACES_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.DO_SPACES_SECRET_ACCESS_KEY!,
   },
+  forcePathStyle: false, // DigitalOcean Spaces requires virtual-hosted-style URLs
 });
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME!;
+const BUCKET_NAME = process.env.DO_SPACES_BUCKET_NAME!;
 
 export interface UploadedFile {
   fileName: string;
@@ -25,7 +30,7 @@ export interface UploadedFile {
 
 export class S3Service {
   // Generate presigned URL for direct upload
-  static async generatePresignedUrl(
+  static async generateUploadUrl(
     fileName: string,
     fileType: string,
     userId: string
@@ -53,11 +58,89 @@ export class S3Service {
     }
   }
 
+  // Generate presigned URL for direct upload using a provided key
+  static async generateUploadUrlForKey(
+    key: string,
+    fileType: string
+  ): Promise<string> {
+    const command = new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+      ContentType: fileType,
+    });
+
+    try {
+      const presignedUrl = await getSignedUrl(s3Client, command, {
+        expiresIn: 3600,
+      }); // 1 hour
+      return presignedUrl;
+    } catch (error) {
+      console.error("Error generating presigned URL for key:", error);
+      throw new Error("Failed to generate upload URL for key");
+    }
+  }
+
+  // Generate presigned URL for viewing/downloading files
+  static async generatePresignedUrl(
+    key: string,
+    operation: "getObject" | "putObject" = "getObject",
+    expiresIn: number = 3600
+  ): Promise<string> {
+    const command =
+      operation === "getObject"
+        ? new GetObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: key,
+          })
+        : new PutObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: key,
+          });
+
+    try {
+      const presignedUrl = await getSignedUrl(s3Client, command, {
+        expiresIn,
+      });
+      return presignedUrl;
+    } catch (error) {
+      console.error("Error generating presigned URL:", error);
+      throw new Error("Failed to generate file URL");
+    }
+  }
+
   // Get the public URL for a file
   static getFileUrl(key: string): string {
-    return `https://${BUCKET_NAME}.s3.${
-      process.env.AWS_REGION || "us-east-1"
-    }.amazonaws.com/${key}`;
+    // Use custom CDN URL if provided, otherwise use default DigitalOcean Spaces URL
+    const cdnUrl = process.env.DO_SPACES_CDN_URL;
+    if (cdnUrl) {
+      return `${cdnUrl}/${key}`;
+    }
+
+    const region = process.env.DO_SPACES_REGION || "blr1";
+    return `https://${BUCKET_NAME}.${region}.digitaloceanspaces.com/${key}`;
+  }
+
+  // Upload a buffer directly to Spaces
+  static async uploadBuffer(
+    key: string,
+    buffer: Uint8Array,
+    contentType: string,
+    metadata?: Record<string, string>
+  ): Promise<void> {
+    const command = new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      Metadata: metadata,
+    });
+
+    try {
+      await s3Client.send(command);
+    } catch (error) {
+      console.error("Error uploading buffer to S3:", error);
+      throw new Error("Failed to upload file to storage");
+    }
   }
 
   // Delete a file from S3
@@ -75,12 +158,24 @@ export class S3Service {
     }
   }
 
-  // Extract key from S3 URL
+  // Extract key from DigitalOcean Spaces URL
   static getKeyFromUrl(url: string): string {
     const bucketName = BUCKET_NAME;
-    const region = process.env.AWS_REGION || "us-east-1";
+    const region = process.env.DO_SPACES_REGION || "blr1";
+
+    // Try CDN URL first
+    const cdnUrl = process.env.DO_SPACES_CDN_URL;
+    if (cdnUrl) {
+      const cdnPattern = new RegExp(
+        `${cdnUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/(.+)`
+      );
+      const cdnMatch = url.match(cdnPattern);
+      if (cdnMatch) return cdnMatch[1];
+    }
+
+    // Fallback to default DigitalOcean Spaces URL
     const pattern = new RegExp(
-      `https://${bucketName}\\.s3\\.${region}\\.amazonaws\\.com/(.+)`
+      `https://${bucketName}\\.${region}\\.digitaloceanspaces\\.com/(.+)`
     );
     const match = url.match(pattern);
     return match ? match[1] : "";

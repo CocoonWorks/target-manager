@@ -7,7 +7,9 @@ export interface ITarget {
   tags: string[];
   status: "pending" | "completed";
   targetDate: Date;
-  priority: "low" | "medium" | "high";
+  documentCount: number;
+  assignedTo: mongoose.Types.ObjectId;
+  score: number | null;
   files: Array<{
     fileName: string;
     fileUrl: string;
@@ -15,7 +17,6 @@ export interface ITarget {
     fileSize: number;
     uploadedAt: Date;
   }>;
-  createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,10 +52,19 @@ const targetSchema = new mongoose.Schema<ITarget>(
       type: Date,
       required: true,
     },
-    priority: {
-      type: String,
-      enum: ["low", "medium", "high"],
-      default: "medium",
+    documentCount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    score: {
+      type: Number,
+      default: null,
     },
     files: [
       {
@@ -80,18 +90,13 @@ const targetSchema = new mongoose.Schema<ITarget>(
         },
       },
     ],
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
   },
   { timestamps: true }
 );
 
 // Index for better query performance
-targetSchema.index({ status: 1, priority: 1, targetDate: 1 });
-targetSchema.index({ createdBy: 1 });
+targetSchema.index({ status: 1, targetDate: 1 });
+targetSchema.index({ assignedTo: 1 });
 
 const Target =
   mongoose.models.Target || mongoose.model<ITarget>("Target", targetSchema);

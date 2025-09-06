@@ -30,7 +30,7 @@ export default function Header() {
           {/* Left side - App name */}
           <div className="flex items-center space-x-2">
             <Briefcase className="h-6 w-6 text-primary" />
-            <span className="font-bold text-foreground">Target Manager</span>
+            <span className="font-bold text-foreground">Task Manager</span>
           </div>
 
           {/* Center - User info */}
@@ -68,7 +68,7 @@ export default function Header() {
               Confirm Logout
             </h3>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Are you sure you want to logout from Target Manager?
+              Are you sure you want to logout from Task Manager?
             </p>
             <div className="flex space-x-3">
               <Button

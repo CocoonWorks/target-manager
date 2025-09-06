@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import { Target } from "@/models";
 import { S3Service } from "@/lib/s3";
+import mongoose from "mongoose";
 
 // POST /api/targets/[id]/upload - Upload files to S3 and update target
 export async function POST(
@@ -37,15 +38,31 @@ export async function POST(
     // Check if target exists and belongs to user
     const target = await Target.findOne({
       _id: params.id,
-      createdBy: userData.userId,
+      assignedTo: new mongoose.Types.ObjectId(userData.userId),
     });
 
     if (!target) {
       return NextResponse.json({ error: "Target not found" }, { status: 404 });
     }
 
-    const body = await request.json();
-    const { files } = body;
+    // Support both JSON with metadata or multipart/form-data with files
+    let files: any[] = [];
+    const contentType = request.headers.get("content-type") || "";
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      const jsonMeta = formData.get("meta");
+      const parsedMeta = jsonMeta ? JSON.parse(String(jsonMeta)) : {};
+      const blobs = formData.getAll("files");
+      files = blobs.map((blob: any, index: number) => ({
+        fileName: parsedMeta.files?.[index]?.fileName || (blob as File).name,
+        fileType: parsedMeta.files?.[index]?.fileType || (blob as File).type,
+        fileSize: parsedMeta.files?.[index]?.fileSize || (blob as File).size,
+        file: blob as File,
+      }));
+    } else {
+      const body = await request.json();
+      files = body.files;
+    }
 
     if (!files || !Array.isArray(files)) {
       return NextResponse.json(
@@ -54,19 +71,20 @@ export async function POST(
       );
     }
 
-    const uploadedFiles = [];
+    const uploadedFiles = [] as any[];
 
     for (const file of files) {
       try {
-        // Generate presigned URL for S3 upload
-        const presignedUrl = await S3Service.generatePresignedUrl(
-          file.fileName,
+        // For server-side upload, write directly to Spaces
+        const key = `targets/${userData.userId}/${Date.now()}-${file.fileName}`;
+        const arrayBuffer = await (file.file as File).arrayBuffer();
+        await S3Service.uploadBuffer(
+          key,
+          new Uint8Array(arrayBuffer),
           file.fileType,
-          userData.userId
+          { uploadedBy: String(userData.userId), originalName: file.fileName }
         );
 
-        // Extract the S3 key from the presigned URL
-        const key = `targets/${userData.userId}/${Date.now()}-${file.fileName}`;
         const fileUrl = S3Service.getFileUrl(key);
 
         uploadedFiles.push({
@@ -97,6 +115,18 @@ export async function POST(
       },
       { new: true }
     );
+
+    // Check if all required files are now uploaded and update status to completed
+    if (
+      updatedTarget &&
+      updatedTarget.files.length >= updatedTarget.documentCount
+    ) {
+      await Target.findByIdAndUpdate(
+        params.id,
+        { status: "completed" },
+        { new: true }
+      );
+    }
 
     return NextResponse.json({
       message: "Files uploaded successfully",
@@ -146,7 +176,7 @@ export async function DELETE(
     // Check if target exists and belongs to user
     const target = await Target.findOne({
       _id: params.id,
-      createdBy: userData.userId,
+      assignedTo: new mongoose.Types.ObjectId(userData.userId),
     });
 
     if (!target) {

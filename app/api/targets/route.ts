@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import { Target, User } from "@/models";
+import mongoose from "mongoose";
 
 // GET /api/targets - Get all targets for the authenticated user
 export async function GET(request: NextRequest) {
@@ -31,9 +32,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const targets = await Target.find({ createdBy: userData.userId })
+    const targets = await Target.find({
+      assignedTo: new mongoose.Types.ObjectId(userData.userId),
+    })
       .sort({ createdAt: -1 })
-      .populate("createdBy", "name username");
+      .populate("assignedTo", "name username");
 
     return NextResponse.json({ targets });
   } catch (error) {
@@ -74,11 +77,25 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, assignedDate, description, tags, targetDate, priority } =
-      body;
+    const {
+      title,
+      assignedDate,
+      description,
+      tags,
+      targetDate,
+      documentCount,
+      assignedTo,
+    } = body;
 
     // Validate required fields
-    if (!title || !assignedDate || !description || !targetDate) {
+    if (
+      !title ||
+      !assignedDate ||
+      !description ||
+      !targetDate ||
+      !documentCount ||
+      !assignedTo
+    ) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -91,8 +108,9 @@ export async function POST(request: NextRequest) {
       description,
       tags: tags || [],
       targetDate: new Date(targetDate),
-      priority: priority || "medium",
-      createdBy: userData.userId,
+      documentCount: parseInt(documentCount),
+      assignedTo: new mongoose.Types.ObjectId(assignedTo),
+      score: null,
       files: [],
     });
 

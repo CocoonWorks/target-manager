@@ -12,29 +12,14 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
-  console.log(
-    "🔍 ProtectedRoute: isAuthenticated:",
-    isAuthenticated,
-    "isLoading:",
-    isLoading
-  );
-
   useEffect(() => {
-    console.log(
-      "🔍 ProtectedRoute: useEffect triggered, isAuthenticated:",
-      isAuthenticated,
-      "isLoading:",
-      isLoading
-    );
     if (!isLoading && !isAuthenticated) {
-      console.log("🔍 ProtectedRoute: Redirecting to login...");
       router.push("/login");
     }
   }, [isAuthenticated, isLoading, router]);
 
   // Show loading state while checking authentication
   if (isLoading) {
-    console.log("🔍 ProtectedRoute: Showing loading state");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -47,11 +32,9 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // If not authenticated, don't render children (will redirect)
   if (!isAuthenticated) {
-    console.log("🔍 ProtectedRoute: Not authenticated, not rendering children");
     return null;
   }
 
   // If authenticated, render children
-  console.log("🔍 ProtectedRoute: Authenticated, rendering children");
   return <>{children}</>;
 }

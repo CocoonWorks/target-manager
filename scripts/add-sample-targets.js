@@ -20,15 +20,15 @@ async function addSampleTargets() {
     console.log("✅ Connected to MongoDB successfully!");
 
     // Import models to ensure schemas are registered
-    require("../models/User");
-    require("../models/Target");
+    require("../models/User.ts");
+    require("../models/Target.ts");
 
     // Get the models
-    const Target = mongoose.model("Target");
-    const User = mongoose.model("User");
+    const TargetModel = mongoose.model("Target");
+    const UserModel = mongoose.model("User");
 
     // Get the demo user ID
-    const demoUser = await User.findOne({ username: "demo" });
+    const demoUser = await UserModel.findOne({ username: "demo" });
     if (!demoUser) {
       console.log("❌ Demo user not found. Please run add-demo-user.js first.");
       return;
@@ -46,8 +46,9 @@ async function addSampleTargets() {
         tags: ["Design", "Frontend", "UI/UX"],
         status: "pending",
         targetDate: new Date("2024-02-15"),
-        priority: "high",
-        createdBy: demoUser._id,
+        documentCount: 5,
+        assignedTo: demoUser._id,
+        score: null,
         files: [],
       },
       {
@@ -58,8 +59,9 @@ async function addSampleTargets() {
         tags: ["Backend", "Database", "DevOps"],
         status: "completed",
         targetDate: new Date("2024-01-25"),
-        priority: "high",
-        createdBy: demoUser._id,
+        documentCount: 8,
+        assignedTo: demoUser._id,
+        score: 95,
         files: [],
       },
       {
@@ -70,8 +72,9 @@ async function addSampleTargets() {
         tags: ["Documentation", "API", "Technical"],
         status: "pending",
         targetDate: new Date("2024-01-30"),
-        priority: "medium",
-        createdBy: demoUser._id,
+        documentCount: 3,
+        assignedTo: demoUser._id,
+        score: null,
         files: [],
       },
       {
@@ -82,8 +85,9 @@ async function addSampleTargets() {
         tags: ["Testing", "Mobile", "QA"],
         status: "pending",
         targetDate: new Date("2024-02-05"),
-        priority: "medium",
-        createdBy: demoUser._id,
+        documentCount: 12,
+        assignedTo: demoUser._id,
+        score: null,
         files: [],
       },
       {
@@ -94,8 +98,9 @@ async function addSampleTargets() {
         tags: ["Security", "Audit", "Compliance"],
         status: "pending",
         targetDate: new Date("2024-02-10"),
-        priority: "high",
-        createdBy: demoUser._id,
+        documentCount: 15,
+        assignedTo: demoUser._id,
+        score: null,
         files: [],
       },
       {
@@ -106,14 +111,17 @@ async function addSampleTargets() {
         tags: ["Performance", "Optimization", "Frontend"],
         status: "pending",
         targetDate: new Date("2024-02-20"),
-        priority: "low",
-        createdBy: demoUser._id,
+        documentCount: 6,
+        assignedTo: demoUser._id,
+        score: null,
         files: [],
       },
     ];
 
     // Check if targets already exist
-    const existingTargets = await Target.find({ createdBy: demoUser._id });
+    const existingTargets = await TargetModel.find({
+      assignedTo: demoUser._id,
+    });
     if (existingTargets.length > 0) {
       console.log("ℹ️  Sample targets already exist for demo user");
       console.log("📊 Found targets:", existingTargets.length);
@@ -121,7 +129,7 @@ async function addSampleTargets() {
     }
 
     // Insert sample targets
-    const insertedTargets = await Target.insertMany(sampleTargets);
+    const insertedTargets = await TargetModel.insertMany(sampleTargets);
     console.log("✅ Sample targets created successfully!");
     console.log("📊 Created targets:", insertedTargets.length);
 
