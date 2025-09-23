@@ -35,6 +35,8 @@ interface Target {
     username: string;
   };
   score: number | null;
+  preview?: string;
+  source?: string;
   files: Array<{
     fileName: string;
     fileUrl: string;
@@ -418,6 +420,57 @@ export default function TargetDetailPage() {
                       {target.description}
                     </p>
                   </div>
+
+                  {/* Preview and Source */}
+                  {(target.preview || target.source) && (
+                    <div className="space-y-4">
+                      {target.preview && (
+                        <div>
+                          <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-3">
+                            Preview
+                          </h3>
+                          <div className="relative rounded-xl overflow-hidden border border-white/20 bg-white/10 backdrop-blur-sm">
+                            <img
+                              src={target.preview}
+                              alt="Task preview"
+                              className="w-full h-auto max-h-96 object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = "none";
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = `
+                                    <div class="p-8 text-center text-gray-600 dark:text-gray-300">
+                                      <Image class="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                                      <p>Preview image could not be loaded</p>
+                                    </div>
+                                  `;
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {target.source && (
+                        <div>
+                          <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-3">
+                            Source
+                          </h3>
+                          <div className="p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20">
+                            <a
+                              href={target.source}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm underline break-all"
+                            >
+                              {target.source}
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Dates */}
                   <div className="grid grid-cols-2 gap-4 sm:gap-6">

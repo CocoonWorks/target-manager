@@ -85,6 +85,8 @@ export async function POST(request: NextRequest) {
       targetDate,
       documentCount,
       assignedTo,
+      preview,
+      source,
     } = body;
 
     // Validate required fields
@@ -111,6 +113,8 @@ export async function POST(request: NextRequest) {
       documentCount: parseInt(documentCount),
       assignedTo: new mongoose.Types.ObjectId(assignedTo),
       score: null,
+      preview: preview || undefined,
+      source: source || undefined,
       files: [],
     });
 

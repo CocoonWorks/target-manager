@@ -49,6 +49,9 @@ async function addSampleTargets() {
         documentCount: 5,
         assignedTo: demoUser._id,
         score: null,
+        preview:
+          "https://images.unsplash.com/photo-1757167301106-7c3bedf90ecd?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
+        source: "https://www.figma.com/file/example/website-redesign",
         files: [],
       },
       {
@@ -75,6 +78,7 @@ async function addSampleTargets() {
         documentCount: 3,
         assignedTo: demoUser._id,
         score: null,
+        source: "https://swagger.io/docs/",
         files: [],
       },
       {

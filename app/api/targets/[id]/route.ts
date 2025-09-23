@@ -95,6 +95,8 @@ export async function PUT(
       assignedTo,
       score,
       status,
+      preview,
+      source,
     } = body;
 
     const target = await Target.findOneAndUpdate(
@@ -112,6 +114,8 @@ export async function PUT(
         assignedTo: assignedTo ? assignedTo : undefined,
         score: score !== undefined ? score : undefined,
         status,
+        preview,
+        source,
       },
       { new: true, runValidators: true }
     );

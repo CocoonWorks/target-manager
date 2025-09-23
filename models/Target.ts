@@ -10,6 +10,8 @@ export interface ITarget {
   documentCount: number;
   assignedTo: mongoose.Types.ObjectId;
   score: number | null;
+  preview?: string;
+  source?: string;
   files: Array<{
     fileName: string;
     fileUrl: string;
@@ -65,6 +67,14 @@ const targetSchema = new mongoose.Schema<ITarget>(
     score: {
       type: Number,
       default: null,
+    },
+    preview: {
+      type: String,
+      required: false,
+    },
+    source: {
+      type: String,
+      required: false,
     },
     files: [
       {
