@@ -352,29 +352,30 @@ export default function TargetDetailPage() {
             {/* Target Details - Glassmorphic */}
             <div className="lg:col-span-2">
               <div className="rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl p-4 sm:p-6 lg:p-8">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-4">
-                      {target.title}
-                    </h1>
-                    {target.score !== null && (
-                      <div className="flex items-center space-x-4 flex-wrap gap-2">
-                        <span className="px-4 py-2 text-sm font-medium rounded-lg bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30">
-                          Score: {target.score}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-white mb-4">
+                    {target.title}
+                  </h1>
+                  {/* {target.score !== null && (
+                    <div className="flex items-center space-x-4 flex-wrap gap-2 mb-4">
+                      <span className="px-4 py-2 text-sm font-medium rounded-lg bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                        Score: {target.score}
+                      </span>
+                    </div>
+                  )} */}
 
                   {/* Mobile Accordion Toggle */}
                   <button
                     onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
-                    className="lg:hidden p-2 rounded-lg bg-white/20 hover:bg-white/30 border border-white/30 transition-colors"
+                    className="lg:hidden flex items-center space-x-2 px-3 py-2 rounded-lg bg-white/20 hover:bg-white/30 border border-white/30 transition-colors mb-4"
                   >
+                    <span className="text-sm font-medium text-gray-800 dark:text-white">
+                      {isDetailsExpanded ? "Hide Details" : "Show Details"}
+                    </span>
                     {isDetailsExpanded ? (
-                      <ChevronUp className="h-5 w-5 text-gray-800 dark:text-white" />
+                      <ChevronUp className="h-4 w-4 text-gray-800 dark:text-white" />
                     ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-800 dark:text-white" />
+                      <ChevronDown className="h-4 w-4 text-gray-800 dark:text-white" />
                     )}
                   </button>
                 </div>
@@ -455,7 +456,7 @@ export default function TargetDetailPage() {
                       {target.source && (
                         <div>
                           <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-3">
-                            Source
+                            Helpful Link
                           </h3>
                           <div className="p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20">
                             <a
