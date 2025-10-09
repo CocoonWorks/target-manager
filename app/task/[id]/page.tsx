@@ -12,6 +12,7 @@ import {
   Image,
   ChevronDown,
   ChevronUp,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProtectedRoute from "@/components/protected-route";
@@ -73,6 +74,15 @@ export default function TargetDetailPage() {
   const [uploadMethod, setUploadMethod] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<any>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [deletingFileIndex, setDeletingFileIndex] = useState<number | null>(
+    null
+  );
+  const [confirmDelete, setConfirmDelete] = useState<{
+    isOpen: boolean;
+    fileIndex: number;
+    fileName: string;
+    fileUrl: string;
+  } | null>(null);
   const { toasts, addToast, removeToast } = useToast();
 
   const targetId = params.id as string;
@@ -224,6 +234,72 @@ export default function TargetDetailPage() {
     });
   };
 
+  const confirmDeleteFile = (
+    fileIndex: number,
+    fileName: string,
+    fileUrl: string
+  ) => {
+    setConfirmDelete({
+      isOpen: true,
+      fileIndex,
+      fileName,
+      fileUrl,
+    });
+  };
+
+  const deleteExistingFile = async () => {
+    if (!confirmDelete || !target) return;
+
+    const { fileIndex, fileUrl } = confirmDelete;
+    setDeletingFileIndex(fileIndex);
+    setConfirmDelete(null);
+
+    try {
+      const token = localStorage.getItem("auth-token");
+      if (!token) {
+        addToast({
+          type: "error",
+          title: "Authentication Error",
+          message: "No authentication token found",
+        });
+        return;
+      }
+
+      const response = await fetch(`/api/targets/${targetId}/upload`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ fileUrl }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete file");
+      }
+
+      addToast({
+        type: "success",
+        title: "File Deleted",
+        message: "File has been successfully deleted.",
+      });
+
+      // Refresh the target data to show updated files
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      addToast({
+        type: "error",
+        title: "Delete Failed",
+        message:
+          error instanceof Error ? error.message : "Failed to delete file",
+      });
+    } finally {
+      setDeletingFileIndex(null);
+    }
+  };
+
   const handleSubmit = async () => {
     if (uploadedFiles.length === 0) {
       addToast({
@@ -267,8 +343,11 @@ export default function TargetDetailPage() {
       // Prepare files for direct upload
       const filesToUpload = uploadedFiles.map((file) => file.file);
 
+      // Clear any previous errors
+      setUploadError(null);
+
       // Upload files directly to DigitalOcean Spaces
-      await UploadManager.uploadFiles(
+      const uploadedFilesResult = await UploadManager.uploadFiles(
         filesToUpload,
         targetId,
         token,
@@ -280,27 +359,32 @@ export default function TargetDetailPage() {
         }
       );
 
-      // Check if target is now completed
-      const isCompleted =
-        target.files.length + uploadedFiles.length >= target.documentCount;
+      // Only proceed if upload was successful
+      if (uploadedFilesResult && uploadedFilesResult.length > 0) {
+        // Check if target is now completed
+        const isCompleted =
+          target.files.length + uploadedFiles.length >= target.documentCount;
 
-      if (isCompleted) {
-        addToast({
-          type: "success",
-          title: "🎉 Target Completed!",
-          message: "All required files have been uploaded successfully.",
-        });
-        // Refresh the target data to show updated status
-        setTimeout(() => window.location.reload(), 2000);
+        if (isCompleted) {
+          addToast({
+            type: "success",
+            title: "🎉 Target Completed!",
+            message: "All required files have been uploaded successfully.",
+          });
+          // Refresh the target data to show updated status
+          setTimeout(() => window.location.reload(), 2000);
+        } else {
+          addToast({
+            type: "success",
+            title: "Files Uploaded",
+            message:
+              "Files uploaded successfully! Upload more files to complete the target.",
+          });
+          // Refresh the target data to show updated files
+          setTimeout(() => window.location.reload(), 2000);
+        }
       } else {
-        addToast({
-          type: "success",
-          title: "Files Uploaded",
-          message:
-            "Files uploaded successfully! Upload more files to complete the target.",
-        });
-        // Refresh the target data to show updated files
-        setTimeout(() => window.location.reload(), 2000);
+        throw new Error("No files were uploaded successfully");
       }
     } catch (error) {
       console.error("Error submitting target:", error);
@@ -645,25 +729,51 @@ export default function TargetDetailPage() {
                       {target.files.map((file, index) => (
                         <div
                           key={index}
-                          className="flex items-center space-x-3 p-3 bg-white/10 rounded-xl border border-white/20 backdrop-blur-sm cursor-pointer hover:bg-white/20 transition-colors"
-                          onClick={() => {
-                            setSelectedFile(file);
-                            setIsViewerOpen(true);
-                          }}
+                          className="flex items-center space-x-3 p-3 bg-white/10 rounded-xl border border-white/20 backdrop-blur-sm hover:bg-white/20 transition-colors"
                         >
-                          {file.fileType.startsWith("image/") ? (
-                            <Image className="h-6 w-6 text-blue-600" />
-                          ) : (
-                            <FileText className="h-6 w-6 text-green-600" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800 dark:text-white truncate">
-                              {file.fileName}
-                            </p>
-                            <p className="text-xs text-gray-600 dark:text-gray-300">
-                              {(file.fileSize / 1024 / 1024).toFixed(2)} MB
-                            </p>
+                          <div
+                            className="flex items-center space-x-3 flex-1 min-w-0 cursor-pointer"
+                            onClick={() => {
+                              setSelectedFile(file);
+                              setIsViewerOpen(true);
+                            }}
+                          >
+                            {file.fileType.startsWith("image/") ? (
+                              <Image className="h-6 w-6 text-blue-600" />
+                            ) : (
+                              <FileText className="h-6 w-6 text-green-600" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 dark:text-white truncate">
+                                {file.fileName}
+                              </p>
+                              <p className="text-xs text-gray-600 dark:text-gray-300">
+                                {(file.fileSize / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
                           </div>
+
+                          {/* Delete Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              confirmDeleteFile(
+                                index,
+                                file.fileName,
+                                file.fileUrl
+                              );
+                            }}
+                            disabled={deletingFileIndex === index}
+                            className="text-red-600 hover:text-red-700 bg-red-500/10 hover:bg-red-500/20 rounded-lg p-2"
+                          >
+                            {deletingFileIndex === index ? (
+                              <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -790,6 +900,42 @@ export default function TargetDetailPage() {
               setSelectedFile(null);
             }}
           />
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        {confirmDelete && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl border border-white/20">
+              <div className="text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/20 mb-4">
+                  <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Delete File
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+                  Are you sure you want to delete{" "}
+                  <strong>"{confirmDelete.fileName}"</strong>? This action
+                  cannot be undone.
+                </p>
+                <div className="flex space-x-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setConfirmDelete(null)}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 border-gray-300 dark:border-gray-600"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={deleteExistingFile}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </ProtectedRoute>
