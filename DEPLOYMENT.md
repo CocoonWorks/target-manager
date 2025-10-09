@@ -137,12 +137,12 @@ pm2 logs task-manager
 ### 5.2 Verify Health Check
 
 ```bash
-curl http://localhost:${PORT:-3030}/api/health
+curl http://localhost:3001/api/health
 ```
 
 Or visit: `http://your-domain.com/api/health`
 
-Note: The app runs on port 3030 by default.
+Note: The app listens on port 3001.
 
 ## Troubleshooting
 
@@ -164,7 +164,7 @@ Note: The app runs on port 3030 by default.
 
    - Check PM2 logs: `pm2 logs task-manager`
    - Verify environment variables in `.env.production`
-   - Check if port 3030 is available
+   - Check if port 3001 is available
 
 4. **Nginx Not Serving**
    - Check Nginx status: `sudo systemctl status nginx`

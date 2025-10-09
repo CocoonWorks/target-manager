@@ -31,5 +31,5 @@ Task management application with file upload capabilities.
 Access dashboard directly:
 
 ```
-http://localhost:3030/api/auth/quick-login?username=demo&password=demo123
+http://localhost:3001/api/auth/quick-login?username=demo&password=demo123
 ```

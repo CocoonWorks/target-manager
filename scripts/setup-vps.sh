@@ -49,7 +49,7 @@ server {
     server_name your-domain.com;  # Replace with your domain
 
     location / {
-        proxy_pass http://localhost:3030;
+        proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -96,8 +96,7 @@ DO_SPACES_ACCESS_KEY=your-access-key
 DO_SPACES_SECRET_KEY=your-secret-key
 
 # App Configuration
-# Optional: Set explicit app port (app uses 3030)
-PORT=3030
+# App listens on 3001 (no PORT override required)
 NEXTAUTH_URL=https://your-domain.com
 NEXTAUTH_SECRET=your-nextauth-secret
 

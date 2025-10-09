@@ -107,8 +107,7 @@ pm2 status $APP_NAME
 # Health check
 echo ""
 echo "🏥 Health Check:"
-HEALTH_PORT=${PORT:-3030}
-if curl -f http://localhost:${HEALTH_PORT}/api/health > /dev/null 2>&1; then
+if curl -f http://localhost:3001/api/health > /dev/null 2>&1; then
     echo "✅ Application is healthy!"
 else
     echo "❌ Health check failed!"
