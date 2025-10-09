@@ -1,0 +1,152 @@
+name: Build and Deploy to VPS
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  NODE_VERSION: "18"
+  APP_NAME: "task-manager"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          # Add any build-time environment variables here
+          NODE_ENV: production
+
+      - name: Create deployment package
+        run: |
+          # Create a deployment directory
+          mkdir -p deployment
+
+          # Copy built files and necessary files
+          cp -r .next deployment/
+          cp -r public deployment/ 2>/dev/null || true
+          cp package*.json deployment/
+          cp next.config.js deployment/
+          cp tailwind.config.js deployment/
+          cp postcss.config.js deployment/
+          cp tsconfig.json deployment/
+
+          # Create deployment script
+          cat > deployment/deploy.sh << 'EOF'
+          #!/bin/bash
+          echo "Starting deployment..."
+
+          # Stop the application if running
+          pm2 stop $APP_NAME 2>/dev/null || true
+
+          # Install production dependencies
+          npm ci --production
+
+          # Start the application
+          pm2 start npm --name "$APP_NAME" -- start
+          pm2 save
+
+          echo "Deployment completed!"
+          EOF
+
+          chmod +x deployment/deploy.sh
+
+          # Create tar archive
+          tar -czf ${{ env.APP_NAME }}-deployment.tar.gz -C deployment .
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            # Create deployment directory
+            mkdir -p /home/${{ secrets.VPS_USERNAME }}/deployments
+            cd /home/${{ secrets.VPS_USERNAME }}/deployments
+
+            # Create backup of current deployment
+            if [ -d "${{ env.APP_NAME }}" ]; then
+              mv ${{ env.APP_NAME }} ${{ env.APP_NAME }}-backup-$(date +%Y%m%d-%H%M%S)
+            fi
+
+            # Create new deployment directory
+            mkdir -p ${{ env.APP_NAME }}
+            cd ${{ env.APP_NAME }}
+
+      - name: Copy files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "${{ env.APP_NAME }}-deployment.tar.gz"
+          target: "/home/${{ secrets.VPS_USERNAME }}/deployments/${{ env.APP_NAME }}/"
+
+      - name: Extract and deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd /home/${{ secrets.VPS_USERNAME }}/deployments/${{ env.APP_NAME }}
+
+            # Extract deployment package
+            tar -xzf ${{ env.APP_NAME }}-deployment.tar.gz
+            rm ${{ env.APP_NAME }}-deployment.tar.gz
+
+            # Copy environment file if it exists
+            if [ -f /home/${{ secrets.VPS_USERNAME }}/.env.production ]; then
+              cp /home/${{ secrets.VPS_USERNAME }}/.env.production .env.local
+            fi
+
+            # Set environment variables for deployment
+            export APP_NAME="${{ env.APP_NAME }}"
+
+            # Run deployment script
+            ./deploy.sh
+
+            # Cleanup old backups (keep last 3)
+            cd /home/${{ secrets.VPS_USERNAME }}/deployments
+            ls -t | grep "${{ env.APP_NAME }}-backup-" | tail -n +4 | xargs rm -rf
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            # Check if the application is running
+            pm2 status ${{ env.APP_NAME }}
+
+            # Optional: Health check
+            # curl -f http://localhost:3000/api/health || exit 1
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ${{ env.APP_NAME }}-deployment.tar.gz
+          rm -rf deployment
