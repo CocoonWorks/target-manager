@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Prefixers
+        run: npm install autoprefixer postcss
+
       - name: Build application
         run: npm run build
         env:
@@ -48,6 +51,10 @@ jobs:
           cp postcss.config.js deployment/
           cp tsconfig.json deployment/
 
+          # Prepare production node_modules to avoid network install on VPS
+          npm prune --omit=dev
+          cp -r node_modules deployment/
+
           # Create deployment script
           cat > deployment/deploy.sh << 'EOF'
           #!/bin/bash
@@ -57,8 +64,13 @@ jobs:
           # Stop the application if running
           pm2 stop $APP_NAME 2>/dev/null || true
 
-          # Install production dependencies
-          npm ci --omit=dev
+          # Use packaged node_modules (built on CI)
+          if [ -d node_modules ]; then
+            echo "Using packaged node_modules"
+          else
+            echo "node_modules not found; attempting install (may require network)"
+            npm ci --omit=dev || true
+          fi
 
           # Start the application
           export PORT=3001
