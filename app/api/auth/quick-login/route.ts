@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic"; // ensure this route is never statically optimized
+export const revalidate = 0; // disable ISR for this route
+export const runtime = "nodejs"; // explicit runtime
 import connectDB from "@/lib/mongodb";
 import { User } from "@/models";
 
@@ -9,7 +12,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
 
     // Get username and password from query parameters
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl; // avoids static analysis issues with new URL(request.url)
     const username = searchParams.get("username");
     const password = searchParams.get("password");
 

@@ -61,8 +61,15 @@ jobs:
           set -euo pipefail
           echo "Starting deployment..."
 
-          # Stop the application if running
-          pm2 stop $APP_NAME 2>/dev/null || true
+          # Ensure APP_NAME is set (fallback to task-manager)
+          APP_NAME="${APP_NAME:-task-manager}"
+
+          # Stop/delete any existing PM2 app with the same name (avoid duplicates)
+          if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
+            echo "Stopping existing PM2 app: $APP_NAME"
+            pm2 stop "$APP_NAME" || true
+            pm2 delete "$APP_NAME" || true
+          fi
 
           # Use packaged node_modules (built on CI)
           if [ -d node_modules ]; then
@@ -72,15 +79,25 @@ jobs:
             npm ci --omit=dev || true
           fi
 
-          # Start the application
-          export PORT=3001
-          if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
-            pm2 restart "$APP_NAME" --update-env || true
+          # Load environment from .env.local if present
+          if [ -f .env.local ]; then
+            set -a
+            # shellcheck disable=SC1091
+            . ./.env.local
+            set +a
+            echo ".env.local loaded"
+          else
+            echo ".env.local not found; starting with current environment"
           fi
-          pm2 start npm --name "$APP_NAME" -- start || pm2 restart "$APP_NAME" --update-env || true
+
+          # Log env check to verify runtime env was loaded
+          echo "ENV CHECK: PORT=${PORT:-unset}"
+
+          # Start the application (single instance)
+          pm2 start npm --name "$APP_NAME" -- start
           pm2 save
 
-          echo "PM2 status after (re)start:"
+          echo "PM2 status after start:"
           pm2 status "$APP_NAME"
           echo "Last 60 lines of app logs:"
           pm2 logs "$APP_NAME" --lines 60 --nostream || true
