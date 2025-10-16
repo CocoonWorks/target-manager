@@ -144,6 +144,12 @@ jobs:
             tar -xzf ${{ env.APP_NAME }}-deployment.tar.gz
             rm ${{ env.APP_NAME }}-deployment.tar.gz
 
+            # Write environment file from GitHub Secrets
+            cat > /home/${{ secrets.VPS_USERNAME }}/.env.production << 'EOF'
+            ${{ secrets.ENV_PRODUCTION }}
+            EOF
+            chmod 600 /home/${{ secrets.VPS_USERNAME }}/.env.production
+
             # Copy environment file if it exists
             if [ -f /home/${{ secrets.VPS_USERNAME }}/.env.production ]; then
               cp /home/${{ secrets.VPS_USERNAME }}/.env.production .env.local
