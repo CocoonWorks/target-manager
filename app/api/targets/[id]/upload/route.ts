@@ -45,78 +45,58 @@ export async function POST(
       return NextResponse.json({ error: "Target not found" }, { status: 404 });
     }
 
-    // Support both JSON with metadata or multipart/form-data with files
-    let files: any[] = [];
+    // Accept multipart/form-data (manual server upload)
     const contentType = request.headers.get("content-type") || "";
-    if (contentType.includes("multipart/form-data")) {
-      const formData = await request.formData();
-      const jsonMeta = formData.get("meta");
-      const parsedMeta = jsonMeta ? JSON.parse(String(jsonMeta)) : {};
-      const blobs = formData.getAll("files");
-      files = blobs.map((blob: any, index: number) => ({
-        fileName: parsedMeta.files?.[index]?.fileName || (blob as File).name,
-        fileType: parsedMeta.files?.[index]?.fileType || (blob as File).type,
-        fileSize: parsedMeta.files?.[index]?.fileSize || (blob as File).size,
-        file: blob as File,
-      }));
-    } else {
-      const body = await request.json();
-      files = body.files;
-    }
-
-    if (!files || !Array.isArray(files)) {
+    if (!contentType.includes("multipart/form-data")) {
       return NextResponse.json(
-        { error: "Files array is required" },
+        { error: "Content-Type must be multipart/form-data" },
         { status: 400 }
       );
     }
 
-    const uploadedFiles = [] as any[];
+    const formData = await request.formData();
+    let blobs = formData.getAll("files");
+    if (!blobs || blobs.length === 0) {
+      const single = formData.get("file");
+      if (single) blobs = [single];
+    }
 
-    for (const file of files) {
-      try {
-        // For server-side upload, write directly to Spaces
-        const key = `targets/${userData.userId}/${Date.now()}-${file.fileName}`;
-        const arrayBuffer = await (file.file as File).arrayBuffer();
-        await S3Service.uploadBuffer(
-          key,
-          new Uint8Array(arrayBuffer),
-          file.fileType,
-          { uploadedBy: String(userData.userId), originalName: file.fileName }
-        );
+    const uploadedFiles: any[] = [];
+    for (const entry of blobs) {
+      if (!(entry instanceof File)) continue;
+      const fileName = entry.name || `upload-${Date.now()}`;
+      const fileType = entry.type || "application/octet-stream";
+      const fileSize = entry.size || 0;
 
-        const fileUrl = S3Service.getFileUrl(key);
+      const key = `targets/${userData.userId}/${Date.now()}-${fileName}`;
+      const arrayBuffer = await entry.arrayBuffer();
+      await S3Service.uploadBuffer(key, new Uint8Array(arrayBuffer), fileType, {
+        uploadedBy: String(userData.userId),
+        originalName: fileName,
+      });
 
-        uploadedFiles.push({
-          fileName: file.fileName,
-          fileUrl,
-          fileType: file.fileType,
-          fileSize: file.fileSize,
-          uploadedAt: new Date(),
-        });
-      } catch (error) {
-        console.error("Error processing file:", file.fileName, error);
-        // Continue with other files
-      }
+      const fileUrl = S3Service.getFileUrl(key);
+      uploadedFiles.push({
+        fileName,
+        fileUrl,
+        fileType,
+        fileSize,
+        uploadedAt: new Date(),
+      });
     }
 
     if (uploadedFiles.length === 0) {
-      return NextResponse.json(
-        { error: "No files were uploaded successfully" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
 
-    // Update target with new files
+    // Update target with the new files
     const updatedTarget = await Target.findByIdAndUpdate(
       params.id,
-      {
-        $push: { files: { $each: uploadedFiles } },
-      },
+      { $push: { files: { $each: uploadedFiles } } },
       { new: true }
     );
 
-    // Check if all required files are now uploaded and update status to completed
+    // Optionally mark as completed
     if (
       updatedTarget &&
       updatedTarget.files.length >= updatedTarget.documentCount
@@ -134,7 +114,7 @@ export async function POST(
       uploadedFiles,
     });
   } catch (error) {
-    console.error("Error uploading files:", error);
+    console.error("Error uploading file:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

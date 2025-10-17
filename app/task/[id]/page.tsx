@@ -17,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import ProtectedRoute from "@/components/protected-route";
 import { useAuth } from "@/hooks/useAuth";
-import { UploadManager, UploadProgress } from "@/lib/upload-utils";
+// Simplified upload: no UploadManager
 import { useToast, ToastContainer } from "@/components/ui/toast";
 import { DocumentViewer } from "@/components/document-viewer";
 
@@ -69,9 +69,7 @@ export default function TargetDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadMethod, setUploadMethod] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<any>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [deletingFileIndex, setDeletingFileIndex] = useState<number | null>(
@@ -178,45 +176,20 @@ export default function TargetDetailPage() {
     const files = event.target.files;
     if (!files) return;
 
-    const fileArray = Array.from(files);
-
-    // Validate files
-    const validationErrors: string[] = [];
-    fileArray.forEach((file) => {
-      const validation = UploadManager.validateFile(file);
-      if (!validation.valid) {
-        validationErrors.push(`${file.name}: ${validation.error}`);
-      }
+    // Accept multiple images/documents; basic type check for image priority
+    const nextFiles: UploadedFile[] = [];
+    Array.from(files).forEach((f) => {
+      const id = Math.random().toString(36).substr(2, 9);
+      const type: "image" | "document" = f.type.startsWith("image/")
+        ? "image"
+        : "document";
+      const preview = type === "image" ? URL.createObjectURL(f) : "";
+      nextFiles.push({ id, file: f, preview, type, name: f.name });
     });
-
-    if (validationErrors.length > 0) {
-      setUploadError(validationErrors.join("\n"));
-      return;
-    }
 
     // Clear previous errors
     setUploadError(null);
-
-    // Add files to preview
-    fileArray.forEach((file) => {
-      const fileId = Math.random().toString(36).substr(2, 9);
-      const fileType = file.type.startsWith("image/") ? "image" : "document";
-
-      let preview = "";
-      if (fileType === "image") {
-        preview = URL.createObjectURL(file);
-      }
-
-      const newFile: UploadedFile = {
-        id: fileId,
-        file,
-        preview,
-        type: fileType,
-        name: file.name,
-      };
-
-      setUploadedFiles((prev) => [...prev, newFile]);
-    });
+    setUploadedFiles((prev) => [...prev, ...nextFiles]);
 
     // Reset input
     if (fileInputRef.current) {
@@ -285,8 +258,15 @@ export default function TargetDetailPage() {
         message: "File has been successfully deleted.",
       });
 
-      // Refresh the target data to show updated files
-      setTimeout(() => window.location.reload(), 1000);
+      // Update local state to reflect deletion without full reload
+      setTarget((prev) => {
+        if (!prev) return prev;
+        const next = {
+          ...prev,
+          files: prev.files.filter((f, i) => i !== fileIndex),
+        } as Target;
+        return next;
+      });
     } catch (error) {
       console.error("Error deleting file:", error);
       addToast({
@@ -319,20 +299,8 @@ export default function TargetDetailPage() {
       return;
     }
 
-    // Check if current uploads + existing files match document count
-    const totalFilesAfterUpload = target.files.length + uploadedFiles.length;
-    if (totalFilesAfterUpload !== target.documentCount) {
-      addToast({
-        type: "warning",
-        title: "Incorrect file count",
-        message: `Please upload exactly ${target.documentCount} documents. Current: ${target.files.length}, uploading: ${uploadedFiles.length}`,
-      });
-      return;
-    }
-
     setIsSubmitting(true);
     setUploadError(null);
-    setUploadMethod("");
 
     try {
       const token = localStorage.getItem("auth-token");
@@ -340,58 +308,40 @@ export default function TargetDetailPage() {
         throw new Error("No authentication token found");
       }
 
-      // Prepare files for direct upload
-      const filesToUpload = uploadedFiles.map((file) => file.file);
+      // Multi-file multipart POST to server endpoint (manual server upload)
+      const form = new FormData();
+      uploadedFiles.forEach((f) => form.append("files", f.file));
 
-      // Clear any previous errors
-      setUploadError(null);
+      const response = await fetch(`/api/targets/${targetId}/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
 
-      // Upload files directly to DigitalOcean Spaces
-      const uploadedFilesResult = await UploadManager.uploadFiles(
-        filesToUpload,
-        targetId,
-        token,
-        (progress) => {
-          setUploadProgress(progress);
-        },
-        (method) => {
-          setUploadMethod(method);
-        }
-      );
-
-      // Only proceed if upload was successful
-      if (uploadedFilesResult && uploadedFilesResult.length > 0) {
-        // Check if target is now completed
-        const isCompleted =
-          target.files.length + uploadedFiles.length >= target.documentCount;
-
-        if (isCompleted) {
-          addToast({
-            type: "success",
-            title: "🎉 Target Completed!",
-            message: "All required files have been uploaded successfully.",
-          });
-          // Refresh the target data to show updated status
-          setTimeout(() => window.location.reload(), 2000);
-        } else {
-          addToast({
-            type: "success",
-            title: "Files Uploaded",
-            message:
-              "Files uploaded successfully! Upload more files to complete the target.",
-          });
-          // Refresh the target data to show updated files
-          setTimeout(() => window.location.reload(), 2000);
-        }
-      } else {
-        throw new Error("No files were uploaded successfully");
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || "Upload failed");
       }
+
+      const data = await response.json();
+      // Update page state without full reload
+      setTarget(data.target);
+      // Revoke previews and clear selection
+      uploadedFiles.forEach((f) => {
+        if (f.preview) URL.revokeObjectURL(f.preview);
+      });
+      setUploadedFiles([]);
+
+      addToast({
+        type: "success",
+        title: "Files Uploaded",
+        message: "Your files have been uploaded successfully.",
+      });
     } catch (error) {
       console.error("Error submitting target:", error);
       setUploadError(error instanceof Error ? error.message : "Unknown error");
     } finally {
       setIsSubmitting(false);
-      setUploadProgress([]);
     }
   };
 
@@ -610,19 +560,7 @@ export default function TargetDetailPage() {
                   </div>
                 </div>
 
-                {/* Document Count Requirement */}
-                <div className="mb-4 p-2 sm:p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    <strong>Requirement:</strong> Upload exactly{" "}
-                    {target.documentCount} document
-                    {target.documentCount !== 1 ? "s" : ""}
-                  </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    Current: {target.files.length} | Uploading:{" "}
-                    {uploadedFiles.length} | Total:{" "}
-                    {target.files.length + uploadedFiles.length}
-                  </p>
-                </div>
+                {/* Simplified: no strict document count gating */}
 
                 {/* Upload Error Display */}
                 {uploadError && (
@@ -630,94 +568,10 @@ export default function TargetDetailPage() {
                     <p className="text-sm text-red-700 dark:text-red-300">
                       <strong>Upload Error:</strong> {uploadError}
                     </p>
-                    <div className="mt-2 space-x-2">
-                      <button
-                        onClick={() => {
-                          localStorage.setItem("use-fallback-upload", "true");
-                          alert(
-                            "Fallback upload enabled. Try uploading again."
-                          );
-                        }}
-                        className="text-xs bg-blue-500/20 hover:bg-blue-500/30 px-2 py-1 rounded border border-blue-500/30"
-                      >
-                        Enable Fallback Upload
-                      </button>
-                      <button
-                        onClick={async () => {
-                          try {
-                            const response = await fetch(
-                              "https://semtasks.blr1.digitaloceanspaces.com/",
-                              {
-                                method: "HEAD",
-                                mode: "cors",
-                              }
-                            );
-                            alert(
-                              `CORS Test: ${
-                                response.status === 200 ? "SUCCESS" : "FAILED"
-                              } (Status: ${response.status})`
-                            );
-                          } catch (error) {
-                            alert(
-                              `CORS Test: FAILED - ${
-                                error instanceof Error
-                                  ? error.message
-                                  : "Unknown error"
-                              }`
-                            );
-                          }
-                        }}
-                        className="text-xs bg-green-500/20 hover:bg-green-500/30 px-2 py-1 rounded border border-green-500/30"
-                      >
-                        Test CORS
-                      </button>
-                    </div>
                   </div>
                 )}
 
-                {/* Upload Method Display */}
-                {uploadMethod && (
-                  <div className="mb-4 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                      <strong>Upload Method:</strong> {uploadMethod}
-                    </p>
-                  </div>
-                )}
-
-                {/* Upload Progress Display */}
-                {uploadProgress.length > 0 && (
-                  <div className="mb-4 space-y-2">
-                    <h4 className="font-medium text-gray-800 dark:text-white text-sm">
-                      Upload Progress
-                    </h4>
-                    {uploadProgress.map((progress, index) => (
-                      <div key={index} className="space-y-1">
-                        <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300">
-                          <span>{progress.fileName}</span>
-                          <span>{progress.progress}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div
-                            className={cn(
-                              "h-2 rounded-full transition-all duration-300",
-                              progress.status === "completed"
-                                ? "bg-green-500"
-                                : progress.status === "error"
-                                ? "bg-red-500"
-                                : "bg-blue-500"
-                            )}
-                            style={{ width: `${progress.progress}%` }}
-                          />
-                        </div>
-                        {progress.error && (
-                          <p className="text-xs text-red-600 dark:text-red-400">
-                            {progress.error}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* Simplified: no method/progress UI */}
 
                 {/* Existing Files */}
                 {target.files && target.files.length > 0 && (
