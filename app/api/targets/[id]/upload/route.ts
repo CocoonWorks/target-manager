@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 import connectDB from "@/lib/mongodb";
 import { Target } from "@/models";
 import { S3Service } from "@/lib/s3";
@@ -63,13 +66,16 @@ export async function POST(
 
     const uploadedFiles: any[] = [];
     for (const entry of blobs) {
-      if (!(entry instanceof File)) continue;
-      const fileName = entry.name || `upload-${Date.now()}`;
-      const fileType = entry.type || "application/octet-stream";
-      const fileSize = entry.size || 0;
+      // Treat entries as Blob-like objects (File may not exist in some Node runtimes)
+      if (!entry || typeof (entry as any).arrayBuffer !== "function") continue;
+      const fileName =
+        ((entry as any).name as string) || `upload-${Date.now()}`;
+      const fileType =
+        ((entry as any).type as string) || "application/octet-stream";
+      const fileSize = ((entry as any).size as number) || 0;
 
       const key = `targets/${userData.userId}/${Date.now()}-${fileName}`;
-      const arrayBuffer = await entry.arrayBuffer();
+      const arrayBuffer = await (entry as any).arrayBuffer();
       await S3Service.uploadBuffer(key, new Uint8Array(arrayBuffer), fileType, {
         uploadedBy: String(userData.userId),
         originalName: fileName,
@@ -115,10 +121,9 @@ export async function POST(
     });
   } catch (error) {
     console.error("Error uploading file:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
