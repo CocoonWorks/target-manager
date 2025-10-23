@@ -102,14 +102,14 @@ export async function POST(
       { new: true }
     );
 
-    // Optionally mark as completed
+    // Optionally mark as submitted
     if (
       updatedTarget &&
       updatedTarget.files.length >= updatedTarget.documentCount
     ) {
       await Target.findByIdAndUpdate(
         params.id,
-        { status: "completed" },
+        { status: "submitted" },
         { new: true }
       );
     }

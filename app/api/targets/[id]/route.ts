@@ -97,6 +97,8 @@ export async function PUT(
       status,
       preview,
       source,
+      report,
+      report_description,
     } = body;
 
     const target = await Target.findOneAndUpdate(
@@ -116,6 +118,8 @@ export async function PUT(
         status,
         preview,
         source,
+        report,
+        report_description,
       },
       { new: true, runValidators: true }
     );

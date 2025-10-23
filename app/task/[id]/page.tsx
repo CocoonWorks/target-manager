@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
+  CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProtectedRoute from "@/components/protected-route";
@@ -25,7 +26,7 @@ interface Target {
   _id: string;
   title: string;
   assignedDate: string;
-  description: string;
+  description: string; // now HTML
   tags: string[];
   status: "pending" | "completed";
   targetDate: string;
@@ -38,6 +39,8 @@ interface Target {
   score: number | null;
   preview?: string;
   source?: string;
+  report?: "accepted" | "rejected";
+  report_description?: string;
   files: Array<{
     fileName: string;
     fileUrl: string;
@@ -451,10 +454,13 @@ export default function TargetDetailPage() {
                     <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-3">
                       Description
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-300 leading-normal text-sm sm:text-base">
-                      {target.description}
-                    </p>
+                    <div
+                      className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-gray-600 dark:text-gray-300"
+                      dangerouslySetInnerHTML={{ __html: target.description }}
+                    />
                   </div>
+
+                  {/* Report status moved outside collapse */}
 
                   {/* Preview and Source */}
                   {(target.preview || target.source) && (
@@ -545,6 +551,25 @@ export default function TargetDetailPage() {
                   </div>
                 </div>{" "}
                 {/* End of collapsible detailed content */}
+                {/* Report status (always visible at bottom of card) */}
+                {target.report === "rejected" && target.report_description && (
+                  <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                    <h4 className="font-semibold text-red-700 dark:text-red-300 mb-1">
+                      Rejected
+                    </h4>
+                    <p className="text-sm text-red-700 dark:text-red-300">
+                      {target.report_description}
+                    </p>
+                  </div>
+                )}
+                {target.report === "accepted" && (
+                  <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-sm text-green-700 dark:text-green-300">
+                      Accepted
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -592,7 +617,7 @@ export default function TargetDetailPage() {
                               setIsViewerOpen(true);
                             }}
                           >
-                            {file.fileType.startsWith("image/") ? (
+                            {file.fileType?.startsWith("image/") ? (
                               <Image className="h-6 w-6 text-blue-600" />
                             ) : (
                               <FileText className="h-6 w-6 text-green-600" />

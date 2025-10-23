@@ -13,7 +13,7 @@ interface Target {
   assignedDate: string;
   description: string;
   tags: string[];
-  status: "pending" | "completed";
+  status: "pending" | "submitted";
   targetDate: string;
   documentCount: number;
   assignedTo: {
@@ -22,6 +22,7 @@ interface Target {
     username: string;
   };
   score: number | null;
+  report?: "accepted" | "rejected" | "pending";
   files: Array<{
     fileName: string;
     fileUrl: string;
@@ -89,7 +90,7 @@ export default function Home() {
       case "pending":
         return tasks.filter((task) => task.status === "pending");
       case "completed":
-        return tasks.filter((task) => task.status === "completed");
+        return tasks.filter((task) => task.status === "submitted");
       case "today":
         return tasks.filter((task) => {
           const targetDate = new Date(task.targetDate);
@@ -228,6 +229,7 @@ export default function Home() {
                 targetDate={task.targetDate}
                 documentCount={task.documentCount}
                 score={task.score}
+                report={task.report}
               />
             ))}
           </div>

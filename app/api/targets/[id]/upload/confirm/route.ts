@@ -83,14 +83,14 @@ export async function POST(
       { new: true }
     );
 
-    // Check if all required files are now uploaded and update status to completed
+    // Check if all required files are now uploaded and update status to submitted
     if (
       updatedTarget &&
       updatedTarget.files.length >= updatedTarget.documentCount
     ) {
       await Target.findByIdAndUpdate(
         params.id,
-        { status: "completed" },
+        { status: "submitted" },
         { new: true }
       );
     }

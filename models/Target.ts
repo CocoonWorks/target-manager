@@ -5,13 +5,15 @@ export interface ITarget {
   assignedDate: Date;
   description: string;
   tags: string[];
-  status: "pending" | "completed";
+  status: "pending" | "submitted";
   targetDate: Date;
   documentCount: number;
   assignedTo: mongoose.Types.ObjectId;
   score: number | null;
   preview?: string;
   source?: string;
+  report?: "accepted" | "rejected" | "pending";
+  report_description?: string;
   files: Array<{
     fileName: string;
     fileUrl: string;
@@ -39,6 +41,16 @@ const targetSchema = new mongoose.Schema<ITarget>(
       required: true,
       trim: true,
     },
+    report: {
+      type: String,
+      enum: ["accepted", "rejected", "pending"],
+      default: "pending",
+    },
+    report_description: {
+      type: String,
+      required: false,
+      trim: true,
+    },
     tags: [
       {
         type: String,
@@ -47,7 +59,7 @@ const targetSchema = new mongoose.Schema<ITarget>(
     ],
     status: {
       type: String,
-      enum: ["pending", "completed"],
+      enum: ["pending", "submitted"],
       default: "pending",
     },
     targetDate: {

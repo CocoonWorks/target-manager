@@ -17,10 +17,11 @@ interface TargetCardProps {
   assignedDate: string;
   description: string;
   tags: string[];
-  status: "completed" | "pending";
+  status: "submitted" | "pending";
   targetDate: string;
   documentCount: number;
   score: number | null;
+  report?: "accepted" | "rejected" | "pending";
 }
 
 export function TargetCard({
@@ -33,6 +34,7 @@ export function TargetCard({
   targetDate,
   documentCount,
   score,
+  report,
 }: TargetCardProps) {
   const router = useRouter();
 
@@ -92,18 +94,34 @@ export function TargetCard({
         {score !== null && <span>Score: {score}</span>}
       </div>
 
-      {/* Status and arrow */}
+      {/* Status, report, and arrow */}
       <div className="flex items-center justify-between">
-        <span
-          className={cn(
-            "px-3 py-1 text-xs font-medium rounded-full",
-            status === "completed"
-              ? "bg-green-500/20 text-green-700 dark:text-green-300 border border-green-500/30"
-              : "bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/30"
-          )}
-        >
-          {status.charAt(0).toUpperCase() + status.slice(1)}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "px-3 py-1 text-xs font-medium rounded-full",
+              status === "submitted"
+                ? "bg-green-500/20 text-green-700 dark:text-green-300 border border-green-500/30"
+                : "bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/30"
+            )}
+          >
+            {status === "submitted" ? "Submitted" : "Pending"}
+          </span>
+          <span
+            className={cn(
+              "px-3 py-1 text-xs font-medium rounded-full",
+              (report || "pending") === "accepted" &&
+                "bg-green-500/20 text-green-700 dark:text-green-300 border border-green-500/30",
+              (report || "pending") === "rejected" &&
+                "bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30",
+              (report || "pending") === "pending" &&
+                "bg-gray-500/20 text-gray-700 dark:text-gray-300 border border-gray-500/30"
+            )}
+          >
+            {(report || "pending").charAt(0).toUpperCase() +
+              (report || "pending").slice(1)}
+          </span>
+        </div>
         <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
       </div>
     </div>
